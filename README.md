@@ -16,26 +16,15 @@ If a timestamp is missing or the meter is `"error"`, say **reset unknown** /
 ## Install
 
 ```bash
-git clone https://github.com/bcharleson/grokbot-usage-cli.git
-cd grokbot-usage-cli
-./install.sh
-```
-
-That copies:
-
-- CLI → `~/.local/bin/grokbot-usage`
-- skill → `~/.grok/skills/fleet-usage/SKILL.md` (Grok Bot / Grok CLI skill path)
-
-Video / one-liner (needs `raw.githubusercontent.com` readable — repo public or a token):
-
-```bash
 curl -fsSL https://raw.githubusercontent.com/bcharleson/grokbot-usage-cli/main/install.sh | bash
 ```
 
-Add `~/.local/bin` to `PATH` if the installer says so. **Python 3.10+ (stdlib) is
-the runtime.** Node is optional and only used as an npm bin shim after a future
-maintainer publish — this package is not on npm yet. A later pipx/PyPI extra is
-not ready.
+Fallback: `git clone https://github.com/bcharleson/grokbot-usage-cli.git && cd grokbot-usage-cli && ./install.sh`
+
+That copies CLI → `~/.local/bin/grokbot-usage` and skill →
+`~/.grok/skills/fleet-usage/SKILL.md`. Add `~/.local/bin` to `PATH` if asked.
+Python 3.10+ (stdlib) is the runtime. The one-liner needs
+`raw.githubusercontent.com` readable (repo public or a token).
 
 This skill also belongs wherever *that* agent reads skills. Copy
 [`cli/skills/fleet-usage/SKILL.md`](cli/skills/fleet-usage/SKILL.md) into a

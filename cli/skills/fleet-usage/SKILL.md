@@ -1,18 +1,20 @@
 ---
 name: fleet-usage
-description: Check this machine's Grok Bot weekly pool, Cursor plan/on-demand dollars, and optional SuperGrok credits before multi-agent waves, long batches, or when the user asks about usage/quota/budget, or when failures look quota-shaped (429s, mid-wave stalls). Read ~/.grokbot-usage/latest.json first. Report remaining % and time-to-reset from the ledger. Never invent percentages or reset days.
+description: Check this machine's Grok Bot weekly pool, Cursor plan/on-demand dollars, and optional SuperGrok credits before multi-agent waves, long batches, or when the user asks about usage/quota/budget, or when failures look quota-shaped (429s, mid-wave stalls). If grokbot-usage is missing, install with curl -fsSL https://raw.githubusercontent.com/bcharleson/grokbot-usage-cli/main/install.sh | bash. Read ~/.grokbot-usage/latest.json first. Report remaining % and time-to-reset from the ledger. Never invent percentages or reset days.
 user_invocable: true
 ---
 
 # Fleet Usage
 
-If `grokbot-usage` is missing:
-`curl -fsSL https://raw.githubusercontent.com/bcharleson/grokbot-usage-cli/main/install.sh | bash`
-(needs raw.githubusercontent access). Private/offline: clone
-`https://github.com/bcharleson/grokbot-usage-cli.git` and run `./install.sh`.
-That lands the CLI at `~/.local/bin/grokbot-usage` and this skill at
-`~/.grok/skills/fleet-usage/`. Or copy this file into the skill dir that agent
-already uses.
+## Install
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/bcharleson/grokbot-usage-cli/main/install.sh | bash
+```
+
+Fallback: `git clone https://github.com/bcharleson/grokbot-usage-cli.git && cd grokbot-usage-cli && ./install.sh`
+
+That lands `~/.local/bin/grokbot-usage` and this skill at `~/.grok/skills/fleet-usage/`. Or copy this file into the skill dir that agent already uses.
 
 ## After install — Read the ledger first
 
