@@ -1,4 +1,17 @@
 __pycache__/
-*.pyc
+*.py[cod]
 .DS_Store
+.venv/
+venv/
+dist/
+*.egg-info/
+
+# local usage + secrets (never commit)
 snapshots/
+latest.json
+.grokbot-usage/
+.secrets/
+secrets/
+*.cookie
+.env
+.env.*

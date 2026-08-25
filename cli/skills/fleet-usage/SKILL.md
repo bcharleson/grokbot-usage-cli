@@ -1,54 +1,76 @@
 ---
 name: fleet-usage
-description: Check AI pool headroom (Grok Bot weekly pool, Cursor plan, SuperGrok credits) via the local grokbot-usage CLI before large or multi-agent work. Use when planning routines, launching multi-task waves, or when the user asks about remaining usage/quota/budget. Read-only, local, no secrets.
+description: Check Grok Bot weekly pool and Cursor plan/on-demand dollars. Prefer ~/.grokbot-usage/latest.json when asOf is under 6 hours old; only run grokbot-usage when that ledger is stale or missing. Use before large or multi-agent work, or when the user asks about usage, quota, or budget.
 user_invocable: true
 ---
 
-# Fleet Usage / Pool Headroom
+# Fleet Usage
 
-Agents sharing a Grok Bot account burn one weekly pool, metered on the linked
-Cursor account. When it hits 100%, work stalls mid-wave. Check before you burn.
+Two meters. One Cursor session. Grok Bot is billed on the linked Cursor account.
 
-## The command
+| Meter | What it is |
+|---|---|
+| `grokbot` | Weekly included pool % |
+| `cursor` | Monthly plan % + on-demand $ |
 
-```bash
-grokbot-usage --json
-```
+## Read the ledger first
 
-Read-only. Local credentials only. Never prints tokens. ~1-2s.
-(If `grokbot-usage` is not on PATH, run
-`python3 <repo>/cli/grokbot_usage.py --json` from a checkout instead.)
-
-Fast gate (exit 1 = grokbot weekly pool >= 90%):
+1. Read `~/.grokbot-usage/latest.json`.
+2. If `asOf` is less than 6 hours old, use those numbers. Do **not** shell the CLI.
+3. If the file is missing or stale, run:
 
 ```bash
-grokbot-usage --quiet
+grokbot-usage --json --write default
 ```
 
-## When to check
+Then read `~/.grokbot-usage/latest.json`.
 
-- BEFORE launching a multi-agent wave, a long routine batch, or computer-use loops
-- When the user asks about usage, quota, budget, or "can we afford this"
-- When tasks fail in ways that could be quota-related (429s, stalls)
-- NOT needed for single quick tasks
+If `grokbot-usage` is not on PATH, run
+`python3 <repo>/cli/grokbot_usage.py --json --write default` from a checkout.
 
-## How to act on the numbers
+**Never invent percentages.** If a meter object has `"error"`, say **unavailable**.
 
-| Reading | Meaning | Action |
+## Recurrence (lean)
+
+OS cron, weekdays at 08:00 / 12:00 / 18:00, writing the ledger:
+
+```cron
+0 8,12,18 * * 1-5 $HOME/.local/bin/grokbot-usage --json --write default
+```
+
+Optional: **one** Grok Bot weekday file-read of `latest.json`. Stay quiet unless over budget.
+
+Do **not** schedule hourly Grok Bot watches. Do **not** use browserUse to scrape usage %.
+
+## Budgets (treat like money)
+
+Overrides (numbers are percents of the grokbot weekly pool):
+
+| Env | Default | Meaning |
 |---|---|---|
-| grokbot weekly < 70% | healthy | proceed |
-| 70-89% | elevated | batch aggressively; avoid redundant agent fan-out; tell the user the number |
-| >= 90% | critical | pause non-essential waves; ask the user before burning more; note reset time |
-| 100% | exhausted | included pool gone; on-demand may be billing the Cursor account per task — surface `onDemandEnabled` + cursor on-demand dollars and ask before proceeding |
-| meter shows "error" | auth expired or endpoint moved | say "usage meter unavailable" — NEVER guess or invent percentages |
+| `GROKBOT_USAGE_WEEKLY_BUDGET` | 90 | Flag the human at or above this weekly % |
+| `GROKBOT_USAGE_DAILY_SPIKE` | 20 | Flag when weekly % jumped this many points vs the last ledger you have |
+
+| grokbot weekly | Band | Action |
+|---|---|---|
+| < 70 | healthy | proceed |
+| 70–89 | elevated | batch; avoid redundant fan-out; tell the human the number |
+| >= weekly budget (default 90) | flag | pause non-essential waves; ask before burning more; cite `resetsAt` |
+| 100 | exhausted | included pool gone — mention Cursor on-demand $ and `onDemandEnabled`; ask before proceeding |
+
+Daily spike: weekly % is `GROKBOT_USAGE_DAILY_SPIKE` or more above the last ledger you recorded (prior `latest.json` `asOf`, or the last check this session) → flag the human.
+
+Cursor cash flag: `onDemandUsedUSD` >= `onDemandLimitUSD` when both are numbers.
+
+Fast gate (exit 1 = grokbot weekly >= threshold, or the meter is unavailable):
+
+```bash
+grokbot-usage --quiet --threshold "${GROKBOT_USAGE_WEEKLY_BUDGET:-90}"
+```
 
 ## Rules
 
-- Report real numbers only, from the CLI. Never estimate or round optimistically.
-- The three pools are SEPARATE: the Cursor IDE plan, the Grok Bot weekly pool,
-  and SuperGrok credits refill on their own clocks. A SuperGrok subscription
-  does NOT refill the Grok Bot pool.
-- Resets: grokbot weekly per `resetsAt` in the JSON (typically weekly);
-  supergrok on its own `resetsAt`.
-- To automate around the cap: schedule heavy work just after reset, and use
-  `--quiet` exit codes as the gate in routines.
+- Real numbers only, from the ledger or CLI. Never estimate or round optimistically.
+- The Cursor session covers Grok Bot. The two pools still refill on their own clocks (`cycleEnd` vs `resetsAt`).
+- Unknown is a breach: an `"error"` meter is unavailable, not 0%.
+- Do not paste, log, or quote session cookies or JWTs.
