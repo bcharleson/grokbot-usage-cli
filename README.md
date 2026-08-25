@@ -102,6 +102,30 @@ Exit `0` ok · `1` grokbot threshold / unknown, or every meter failed · `2` usa
 Human output prints each meter's reset from **this account's** API timestamp
 (converted to local). It does not assume a global reset day.
 
+## Resets and self-awareness
+
+The three pools reset on **different clocks**. Read them from
+`~/.grokbot-usage/latest.json`. Never hardcode dates. Never invent %.
+
+| Meter | Who should care | Fields |
+|---|---|---|
+| `cursor` | Cursor-only humans too. Cloud agents + IDE Agent burn plan %. On-demand $ is cash, not a weekly reset | `cycleStart`, `cycleEnd`, `planPercentUsed`, `onDemandUsedUSD`, `onDemandLimitUSD` |
+| `grokbot` | Grok Bot routines, long chats, computer-use, multi-agent waves | `weeklyPercentUsed`, `resetsAt`, `periodStart` |
+| `supergrok` | SuperGrok Heavy (Chat / Imagine / Build). Optional | `weeklyPercentUsed`, `resetsAt` |
+
+A SuperGrok sub does not refill Grok Bot. Cursor login does not read SuperGrok.
+Missing SuperGrok = **unavailable**, not 0%. If a timestamp is missing: **reset unknown**.
+
+Agents: before work, one sentence with remaining % and time-to-reset for each
+available meter. Schedule heavy fleet work just after **this account's**
+`grokbot.resetsAt`. Tell the human when grokbot is over budget, there is a
+daily spike, Cursor on-demand is over cap, or any meter is <24h to reset and
+already elevated. Otherwise quiet.
+
+EXAMPLE speech (not live; the next reader's clocks will differ):
+
+> Grok Bot 40% used, resets Tuesday 11:00 local; Cursor plan 23% used, cycle ends mid-month; SuperGrok 33% used, resets Friday morning.
+
 ## Lean cron (OS — not a Grok Bot routine)
 
 Weekdays at 08:00 / 12:00 / 18:00, write the ledger. Agents **Read the file**.
