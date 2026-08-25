@@ -11,9 +11,11 @@ from unittest.mock import patch
 from helpers import (
     CURSOR_SUMMARY,
     GROKBOT_STATUS,
+    SUPERGROK_BILLING,
     make_cookie,
     make_jwt,
     usage,
+    write_grok_auth,
 )
 
 
@@ -32,9 +34,10 @@ class CliTests(unittest.TestCase):
         self.env.start()
         self.addCleanup(self.env.stop)
 
-    def _http(self, grokbot=None, cursor=None):
+    def _http(self, grokbot=None, cursor=None, supergrok=None):
         grokbot = GROKBOT_STATUS if grokbot is None else grokbot
         cursor = CURSOR_SUMMARY if cursor is None else cursor
+        supergrok = SUPERGROK_BILLING if supergrok is None else supergrok
 
         def fake(method, url, **kwargs):
             if "usage-summary" in url:
@@ -45,6 +48,12 @@ class CliTests(unittest.TestCase):
                 if isinstance(grokbot, Exception):
                     raise grokbot
                 return grokbot
+            if "billing" in url:
+                self.assertIsNone(kwargs.get("cookie"))
+                self.assertTrue(kwargs.get("bearer"))
+                if isinstance(supergrok, Exception):
+                    raise supergrok
+                return supergrok
             raise AssertionError(f"unexpected url {url}")
 
         return patch.object(usage, "http_json", side_effect=fake)
@@ -59,6 +68,8 @@ class CliTests(unittest.TestCase):
         self.assertIn("asOf", data)
         self.assertEqual(data["grokbot"]["weeklyPercentUsed"], 55)
         self.assertEqual(data["cursor"]["onDemandUsedUSD"], 8.0)
+        self.assertIn("error", data["supergrok"])
+        self.assertNotIn("weeklyPercentUsed", data["supergrok"])
         printed = json.loads(buf.getvalue())
         self.assertEqual(printed["grokbot"]["weeklyPercentUsed"], 55)
         blob = ledger.read_text() + buf.getvalue()
@@ -123,6 +134,8 @@ class CliTests(unittest.TestCase):
         self.assertIn("error", data["cursor"])
         self.assertEqual(data["grokbot"]["weeklyPercentUsed"], 55)
         self.assertNotIn("percent", data["cursor"])
+        self.assertIn("error", data["supergrok"])
+        self.assertNotEqual(data["supergrok"].get("weeklyPercentUsed"), 0)
 
     def test_every_meter_failed_exits_1(self):
         buf = io.StringIO()
@@ -133,6 +146,7 @@ class CliTests(unittest.TestCase):
         data = json.loads(buf.getvalue())
         self.assertIn("error", data["cursor"])
         self.assertIn("error", data["grokbot"])
+        self.assertIn("error", data["supergrok"])
 
     def test_meter_filter(self):
         buf = io.StringIO()
@@ -142,6 +156,7 @@ class CliTests(unittest.TestCase):
         data = json.loads(buf.getvalue())
         self.assertIn("grokbot", data)
         self.assertNotIn("cursor", data)
+        self.assertNotIn("supergrok", data)
 
     def test_human_unavailable_wording(self):
         buf = io.StringIO()
@@ -155,14 +170,52 @@ class CliTests(unittest.TestCase):
             usage.main(["--from-ide"])
         self.assertEqual(ctx.exception.code, 2)
 
-    def test_help_has_only_two_meters(self):
+    def test_help_lists_three_meters(self):
         buf = io.StringIO()
         with patch("sys.stdout", buf):
             with self.assertRaises(SystemExit):
                 usage.main(["--help"])
-        text = buf.getvalue().lower()
-        self.assertNotIn("super" + "grok", text)
-        self.assertNotIn("cli-chat-" + "proxy", text)
+        text = buf.getvalue()
+        self.assertIn("supergrok", text)
+        self.assertIn("cursor", text)
+        self.assertIn("grokbot", text)
+
+    def test_missing_grok_auth_is_error_not_zero(self):
+        buf = io.StringIO()
+        with self._http(), patch("sys.stdout", buf):
+            code = usage.main(["--json", "--meter", "supergrok"])
+        self.assertEqual(code, 1)
+        data = json.loads(buf.getvalue())
+        self.assertIn("error", data["supergrok"])
+        self.assertNotEqual(data["supergrok"].get("weeklyPercentUsed"), 0)
+        self.assertIsNone(data["supergrok"].get("weeklyPercentUsed"))
+
+    def test_cursor_failure_does_not_poison_supergrok(self):
+        token = make_jwt("example-user|sg_ok")
+        write_grok_auth(Path(self.home) / ".grok" / "auth.json", token)
+        os.environ.pop("CURSOR_SESSION_COOKIE", None)
+        buf = io.StringIO()
+        with self._http(cursor=RuntimeError("cursor down")), \
+                patch("sys.stdout", buf):
+            code = usage.main(["--json"])
+        self.assertEqual(code, 0)
+        data = json.loads(buf.getvalue())
+        self.assertIn("error", data["cursor"])
+        self.assertIn("error", data["grokbot"])
+        self.assertEqual(data["supergrok"]["weeklyPercentUsed"], 22.0)
+        self.assertNotIn(token, buf.getvalue())
+
+    def test_meter_supergrok_ok(self):
+        token = make_jwt("example-user|sg_ok")
+        write_grok_auth(Path(self.home) / ".grok" / "auth.json", token)
+        buf = io.StringIO()
+        with self._http(), patch("sys.stdout", buf):
+            code = usage.main(["--json", "--meter", "supergrok"])
+        self.assertEqual(code, 0)
+        data = json.loads(buf.getvalue())
+        self.assertEqual(data["supergrok"]["weeklyPercentUsed"], 22.0)
+        self.assertNotIn("cursor", data)
+        self.assertNotIn(token, buf.getvalue())
 
 
 if __name__ == "__main__":

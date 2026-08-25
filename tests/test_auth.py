@@ -8,7 +8,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from helpers import make_cookie, make_jwt, usage, write_vscdb
+from helpers import make_cookie, make_jwt, usage, write_grok_auth, write_vscdb
 
 
 class NormalizeCookieTests(unittest.TestCase):
@@ -29,11 +29,9 @@ class NormalizeCookieTests(unittest.TestCase):
         )
 
     def test_named_cookie_header_stripped(self):
-        raw = "WorkosCursorSessionToken=user_01EXAMPLE%3A%3Aabc.def.ghi"
-        self.assertEqual(
-            usage.normalize_session_cookie(raw),
-            "user_01EXAMPLE%3A%3Aabc.def.ghi",
-        )
+        body = "user_01EXAMPLE%3A%3Aabc.def.ghi"
+        raw = "WorkosCursorSessionToken=" + body
+        self.assertEqual(usage.normalize_session_cookie(raw), body)
 
     def test_empty_rejected(self):
         with self.assertRaises(RuntimeError):
@@ -203,6 +201,43 @@ class LoginLogoutTests(unittest.TestCase):
         self.assertTrue((Path(self.home) / ".secrets" / "cursor-session-cookie").is_file())
         with patch("sys.stdout", io.StringIO()):
             self.assertEqual(usage.main(["logout"]), 0)
+
+
+class GrokBearerTests(unittest.TestCase):
+    def setUp(self):
+        import tempfile
+        self._cm = tempfile.TemporaryDirectory()
+        self.addCleanup(self._cm.cleanup)
+        self.home = self._cm.name
+        self.env = patch.dict(os.environ, {"HOME": self.home}, clear=False)
+        self.env.start()
+        self.addCleanup(self.env.stop)
+
+    def test_missing_file(self):
+        with self.assertRaises(RuntimeError) as ctx:
+            usage.grok_bearer()
+        self.assertIn("auth.json", str(ctx.exception))
+        self.assertIn("device-auth", str(ctx.exception))
+
+    def test_reads_access_token_without_echo(self):
+        token = make_jwt("example-user|grok_auth")
+        write_grok_auth(Path(self.home) / ".grok" / "auth.json", token)
+        self.assertEqual(usage.grok_bearer(), token)
+        empty = usage.find_bearer({"note": "no token here"})
+        self.assertIsNone(empty)
+
+    def test_nested_xai_oauth_prefix(self):
+        token = "xai-" + "oauth" + "EXAMPLETOKENVALUE"
+        blob = {"session": {"nested": {"access_token": token}}}
+        self.assertEqual(usage.find_bearer(blob), token)
+
+    def test_empty_file_is_error(self):
+        path = Path(self.home) / ".grok" / "auth.json"
+        path.parent.mkdir(parents=True)
+        path.write_text("{}\n", encoding="utf-8")
+        with self.assertRaises(RuntimeError) as ctx:
+            usage.grok_bearer()
+        self.assertIn("no bearer", str(ctx.exception))
 
 
 class SafeErrorTests(unittest.TestCase):

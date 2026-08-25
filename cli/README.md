@@ -1,7 +1,8 @@
 # grokbot-usage
 
-Read-only CLI that reports two AI usage meters from local Cursor credentials,
-and lets Grok Bot agents check their own consumption before they burn through it.
+Read-only CLI that reports Cursor, Grok Bot, and optional SuperGrok usage
+from local credentials, and lets Grok Bot agents check their own consumption
+before they burn through it.
 
 The install target and binary name is `grokbot-usage`. The repository is
 [grokbot-usage-cli](https://github.com/bcharleson/grokbot-usage-cli).
@@ -17,16 +18,17 @@ python3 grokbot_usage.py --quiet         # exit 1 when the Grok Bot pool >= 90%
 python3 grokbot_usage.py login           # store ~/.secrets/cursor-session-cookie
 ```
 
-## The two pools
+## The three pools
 
 | Meter | What burns it | Auth (local read) |
 |---|---|---|
 | `cursor` | Cursor IDE plan + on-demand dollars | Cursor session (env, login file, or IDE) |
 | `grokbot` | Grok Bot weekly included pool | Same Cursor session |
+| `supergrok` | SuperGrok weekly credits (optional) | `~/.grok/auth.json` from `grok login` |
 
 ## Design rules
 
 - **Read-only meters.** Local credential reads; tokens never printed or logged.
-- **Fail-open per meter.** One broken meter never blocks the other.
+- **Fail-open per meter.** One broken meter never blocks the others.
 - **No invented numbers.** Missing API fields stay `null`.
 - **Stdlib only.** One file, zero dependencies, Python 3.10+.

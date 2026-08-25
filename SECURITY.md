@@ -8,10 +8,12 @@ usage endpoints the Cursor dashboard uses. Treat that session as a password.
 | Location | Mode | Purpose |
 |---|---|---|
 | `~/.secrets/cursor-session-cookie` | `0600` (`~/.secrets` is `0700`) | Written by `grokbot-usage login` |
+| `~/.grok/auth.json` | written by the Grok CLI (`0600`) | SuperGrok bearer — this CLI only reads it |
 | `~/.grokbot-usage/latest.json` | default umask | Usage ledger only — no tokens |
 
 `CURSOR_SESSION_COOKIE` and Cursor IDE `state.vscdb` are read in memory and
-never copied into the ledger.
+never copied into the ledger. SuperGrok uses the Grok CLI file only — the
+Cursor cookie is never sent to grok.com.
 
 ## Rules this project will not break
 

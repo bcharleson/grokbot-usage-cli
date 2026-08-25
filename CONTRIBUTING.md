@@ -16,14 +16,15 @@ root; the test helper adds `cli/` to `sys.path`.
 
 ## Scope
 
-Two meters only: `cursor` (monthly plan % + on-demand $) and `grokbot`
-(weekly included pool). Do not add another meter. The Cursor session covers
-Grok Bot.
+Three meters: `cursor` (monthly plan % + on-demand $), `grokbot` (weekly
+included pool), and optional `supergrok` (weekly credits via `grok login`,
+not the Cursor cookie). The Cursor session covers Grok Bot only. Do not send
+`WorkosCursorSessionToken` to grok.com.
 
 ## Tests
 
 - `unittest` and `unittest.mock` only.
-- Mock HTTP. Do not hit cursor.com from tests.
+- Mock HTTP. Do not hit cursor.com or grok.com from tests.
 - Do not commit cookies, JWTs, `latest.json` ledgers, or `snapshots/`.
 - After a CLI change, add or update a test in `tests/`.
 
@@ -36,9 +37,9 @@ CI runs the same commands on Python 3.10 and 3.12.
 
 ## Secrets
 
-Never print, log, or commit session cookies or JWTs. `login` writes
-`~/.secrets/cursor-session-cookie` at mode `0600`. Example JSON in docs must
-be marked EXAMPLE and must not be live data.
+Never print, log, or commit session cookies, JWTs, or `~/.grok/auth.json`.
+`login` writes `~/.secrets/cursor-session-cookie` at mode `0600`. Example JSON
+in docs must be marked EXAMPLE and must not be live data.
 
 ## Pull requests
 

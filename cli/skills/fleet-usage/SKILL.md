@@ -1,22 +1,23 @@
 ---
 name: fleet-usage
-description: Check Grok Bot weekly pool and Cursor plan/on-demand dollars. Prefer ~/.grokbot-usage/latest.json when asOf is under 6 hours old; only run grokbot-usage when that ledger is stale or missing. Use before large or multi-agent work, or when the user asks about usage, quota, or budget.
+description: Check Grok Bot weekly pool, Cursor plan/on-demand dollars, and optional SuperGrok credits. Prefer ~/.grokbot-usage/latest.json when asOf is under 6 hours old; only run grokbot-usage when that ledger is stale or missing. Use before large or multi-agent work, or when the user asks about usage, quota, or budget.
 user_invocable: true
 ---
 
 # Fleet Usage
 
-Two meters. One Cursor session. Grok Bot is billed on the linked Cursor account.
+Cursor login covers `cursor` + `grokbot`. SuperGrok is a separate grok.com / x.ai login even when SuperGrok Heavy is linked to Cursor.
 
-| Meter | What it is |
-|---|---|
-| `grokbot` | Weekly included pool % |
-| `cursor` | Monthly plan % + on-demand $ |
+| Meter | What it is | Auth |
+|---|---|---|
+| `grokbot` | Weekly included pool % | Cursor session |
+| `cursor` | Monthly plan % + on-demand $ | Same Cursor session |
+| `supergrok` | Weekly SuperGrok credits % (optional) | `~/.grok/auth.json` from `grok login` |
 
 ## Read the ledger first
 
 1. Read `~/.grokbot-usage/latest.json`.
-2. If `asOf` is less than 6 hours old, use those numbers. Do **not** shell the CLI.
+2. If `asOf` is less than 6 hours old, use those numbers. Do **not** shell the CLI. Do **not** start an LLM turn just to check usage.
 3. If the file is missing or stale, run:
 
 ```bash
@@ -28,7 +29,20 @@ Then read `~/.grokbot-usage/latest.json`.
 If `grokbot-usage` is not on PATH, run
 `python3 <repo>/cli/grokbot_usage.py --json --write default` from a checkout.
 
-**Never invent percentages.** If a meter object has `"error"`, say **unavailable**.
+**Never invent percentages.** If a meter object has `"error"`, say **unavailable**. That includes SuperGrok when `~/.grok/auth.json` is missing — it is not 0%. Do not send the human to ask a friend.
+
+## SuperGrok (optional)
+
+The Cursor cookie does not unlock SuperGrok. Headless / proven path:
+
+```bash
+curl -fsSL https://x.ai/cli/install.sh | bash
+grok login --device-auth
+```
+
+Open the printed `accounts.x.ai` URL and confirm the code. Browser alternative: `grok login`. Session lands in `~/.grok/auth.json` (mode 0600). Never commit it. `grok logout` clears it.
+
+If SuperGrok is error/unavailable, report that and continue with `cursor` + `grokbot`.
 
 ## Recurrence (lean)
 
@@ -71,6 +85,6 @@ grokbot-usage --quiet --threshold "${GROKBOT_USAGE_WEEKLY_BUDGET:-90}"
 ## Rules
 
 - Real numbers only, from the ledger or CLI. Never estimate or round optimistically.
-- The Cursor session covers Grok Bot. The two pools still refill on their own clocks (`cycleEnd` vs `resetsAt`).
+- Cursor session covers Grok Bot only. SuperGrok refills on its own `resetsAt`.
 - Unknown is a breach: an `"error"` meter is unavailable, not 0%.
-- Do not paste, log, or quote session cookies or JWTs.
+- Do not paste, log, or quote session cookies, JWTs, or `auth.json` contents.

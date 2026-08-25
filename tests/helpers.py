@@ -28,6 +28,11 @@ def make_cookie(sub_tail: str = "user_01EXAMPLE", token: str | None = None) -> s
     return f"{sub_tail}%3A%3A{jwt}"
 
 
+def write_grok_auth(path: Path, token: str) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps({"access_token": token}), encoding="utf-8")
+
+
 def write_vscdb(path: Path, token: str) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     con = sqlite3.connect(path)
@@ -54,6 +59,13 @@ CURSOR_SUMMARY = {
     "billingCycleStart": "2026-01-01T00:00:00.000Z",
     "billingCycleEnd": "2026-02-01T00:00:00.000Z",
     "membershipType": "pro",
+}
+
+SUPERGROK_BILLING = {
+    "config": {
+        "creditUsagePercent": 22.0,
+        "currentPeriod": {"end": "2026-01-16T12:00:00.000Z"},
+    },
 }
 
 GROKBOT_STATUS = {

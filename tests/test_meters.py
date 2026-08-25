@@ -5,7 +5,14 @@ import json
 import unittest
 from unittest.mock import MagicMock, patch
 
-from helpers import CURSOR_SUMMARY, GROKBOT_STATUS, make_cookie, usage
+from helpers import (
+    CURSOR_SUMMARY,
+    GROKBOT_STATUS,
+    SUPERGROK_BILLING,
+    make_cookie,
+    make_jwt,
+    usage,
+)
 
 
 class MeterParseTests(unittest.TestCase):
@@ -43,12 +50,28 @@ class MeterParseTests(unittest.TestCase):
         self.assertTrue(result["onDemandEnabled"])
         self.assertEqual(result["planLabel"], "Grok Bot Plan")
 
-    def test_removed_third_meter_rejected(self):
-        gone = "super" + "grok"
-        self.assertFalse(hasattr(usage, "meter_" + gone))
+    def test_meter_supergrok_maps_credits(self):
+        token = make_jwt("example-user|sg")
+        with patch.object(usage, "http_json", return_value=SUPERGROK_BILLING) as http:
+            result = usage.meter_supergrok(token)
+        args, kwargs = http.call_args
+        self.assertEqual(args[0], "GET")
+        self.assertIn("billing?format=credits", args[1])
+        self.assertEqual(kwargs["bearer"], token)
+        self.assertEqual(
+            kwargs["extra_headers"][usage.XAI_TOKEN_AUTH_HEADER],
+            usage.XAI_TOKEN_AUTH_VALUE,
+        )
+        self.assertNotIn("cookie", kwargs)
+        self.assertIsNone(kwargs.get("cookie"))
+        self.assertEqual(result["weeklyPercentUsed"], 22.0)
+        self.assertEqual(result["resetsAt"], "2026-01-16T12:00:00.000Z")
+        self.assertNotIn("error", result)
+
+    def test_supergrok_meter_is_optional_choice(self):
         parser = usage.build_parser()
-        with self.assertRaises(SystemExit):
-            parser.parse_args(["--meter", gone])
+        args = parser.parse_args(["--meter", "supergrok"])
+        self.assertEqual(args.meter, "supergrok")
 
 
 class HttpJsonTests(unittest.TestCase):
@@ -93,6 +116,33 @@ class HttpJsonTests(unittest.TestCase):
                                 cookie=make_cookie())
         self.assertIn("HTTP 401", str(ctx.exception))
         self.assertNotIn("%3A%3A", str(ctx.exception))
+
+    def test_supergrok_headers_without_cursor_cookie(self):
+        token = make_jwt("example-user|sg")
+        body = json.dumps({"ok": True}).encode()
+        resp = MagicMock()
+        resp.read.return_value = body
+        resp.__enter__.return_value = resp
+        resp.__exit__.return_value = False
+        captured = {}
+
+        def fake_urlopen(req, data=None, timeout=15):
+            captured["headers"] = {k.lower(): v for k, v in req.header_items()}
+            captured["cookie"] = req.get_header("Cookie")
+            return resp
+
+        with patch.object(usage.urllib.request, "urlopen", side_effect=fake_urlopen):
+            usage.http_json(
+                "GET",
+                "https://cli-chat-proxy.grok.com/v1/billing?format=credits",
+                bearer=token,
+                extra_headers={usage.XAI_TOKEN_AUTH_HEADER: usage.XAI_TOKEN_AUTH_VALUE},
+            )
+        headers = captured["headers"]
+        self.assertEqual(headers.get("authorization"), f"Bearer {token}")
+        self.assertEqual(headers.get("x-xai-token-auth"), usage.XAI_TOKEN_AUTH_VALUE)
+        self.assertIsNone(captured["cookie"])
+        self.assertNotIn("cookie", headers)
 
 
 if __name__ == "__main__":
