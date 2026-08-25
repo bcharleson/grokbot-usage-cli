@@ -16,25 +16,26 @@ If a timestamp is missing or the meter is `"error"`, say **reset unknown** /
 ## Install
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/bcharleson/grokbot-usage-cli/main/install.sh | bash
-```
-
-That one-liner needs `raw.githubusercontent.com` to be readable (the GitHub
-repo public, or a token). It copies:
-
-- CLI → `~/.local/bin/grokbot-usage`
-- skill → `~/.grok/skills/fleet-usage/SKILL.md` (Grok Bot / Grok CLI skill path)
-
-Private or offline fallback (no raw.githubusercontent access):
-
-```bash
 git clone https://github.com/bcharleson/grokbot-usage-cli.git
 cd grokbot-usage-cli
 ./install.sh
 ```
 
-Add `~/.local/bin` to `PATH` if the installer says so. Stdlib Python 3.10+ on
-macOS or Linux. A later pipx/PyPI extra is not ready.
+That copies:
+
+- CLI → `~/.local/bin/grokbot-usage`
+- skill → `~/.grok/skills/fleet-usage/SKILL.md` (Grok Bot / Grok CLI skill path)
+
+Video / one-liner (needs `raw.githubusercontent.com` readable — repo public or a token):
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/bcharleson/grokbot-usage-cli/main/install.sh | bash
+```
+
+Add `~/.local/bin` to `PATH` if the installer says so. **Python 3.10+ (stdlib) is
+the runtime.** Node is optional and only used as an npm bin shim after a future
+maintainer publish — this package is not on npm yet. A later pipx/PyPI extra is
+not ready.
 
 This skill also belongs wherever *that* agent reads skills. Copy
 [`cli/skills/fleet-usage/SKILL.md`](cli/skills/fleet-usage/SKILL.md) into a
@@ -227,6 +228,16 @@ The timestamps below are **EXAMPLE** only. The next reader's `resetsAt` /
 ```
 
 A meter that cannot be read reports `{"error": "..."}` instead of fake numbers.
+
+## Publish (maintainer)
+
+Stay private until you review and scrub. Then **you** flip GitHub visibility
+and **you** run `npm publish`. Agents must not change visibility or publish.
+
+The package name is `grokbot-usage-cli` (matches the repo). A registry lookup
+for that name returned 404 at packaging time — re-check before you publish.
+The tarball is the Python CLI plus a tiny `bin/grokbot-usage` Node shim that
+execs `python3`. No postinstall network. No tokens in the package.
 
 ## License
 

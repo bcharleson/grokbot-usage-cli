@@ -3,8 +3,8 @@
 Stdlib Python CLI. Binary name `grokbot-usage`. Repo
 [grokbot-usage-cli](https://github.com/bcharleson/grokbot-usage-cli).
 
-Primary install is the curl one-liner in the [project README](../README.md)
-(`install.sh` piped or from a clone). Stdlib Python — not npm.
+Primary install is clone + `./install.sh` — see the [project README](../README.md).
+Python 3.10+ is the runtime. Not on npm yet.
 
 ```bash
 python3 grokbot_usage.py

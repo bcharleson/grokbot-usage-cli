@@ -1,8 +1,9 @@
 # Contributing
 
 CLI name `grokbot-usage`. Repo `grokbot-usage-cli`. Stdlib Python 3.10+ only.
-Video install is `curl …/install.sh | bash`. Private/offline is
-`git clone` + `./install.sh`. Not npm.
+Install is `git clone` + `./install.sh`. Do not `npm publish` and do not
+change GitHub visibility from this tree. `package.json` is for the owner's
+later publish only.
 
 ```bash
 git clone https://github.com/bcharleson/grokbot-usage-cli.git

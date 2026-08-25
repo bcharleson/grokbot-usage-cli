@@ -1,0 +1,37 @@
+{
+  "name": "grokbot-usage-cli",
+  "version": "0.1.0",
+  "private": false,
+  "description": "Read-only Cursor + Grok Bot usage meters. Stdlib Python 3.10+ is the runtime; this package is a bin shim only.",
+  "license": "MIT",
+  "bin": {
+    "grokbot-usage": "bin/grokbot-usage.js"
+  },
+  "files": [
+    "bin/",
+    "cli/",
+    "install.sh",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=16"
+  },
+  "os": [
+    "darwin",
+    "linux"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/bcharleson/grokbot-usage-cli.git"
+  },
+  "bugs": {
+    "url": "https://github.com/bcharleson/grokbot-usage-cli/issues"
+  },
+  "homepage": "https://github.com/bcharleson/grokbot-usage-cli#readme",
+  "keywords": [
+    "cursor",
+    "grok-bot",
+    "usage"
+  ]
+}
