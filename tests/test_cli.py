@@ -170,6 +170,28 @@ class CliTests(unittest.TestCase):
             usage.main(["--from-ide"])
         self.assertEqual(ctx.exception.code, 2)
 
+    def test_cookie_file_requires_login(self):
+        with self.assertRaises(SystemExit) as ctx:
+            usage.main(["--cookie-file", "x"])
+        self.assertEqual(ctx.exception.code, 2)
+
+    def test_reset_unknown_when_missing(self):
+        self.assertEqual(usage.fmt_reset(None), "reset unknown")
+        self.assertEqual(usage.fmt_reset(""), "reset unknown")
+        self.assertEqual(usage.fmt_reset("not-a-timestamp"), "reset unknown")
+        parsed = usage.fmt_reset("2026-01-15T16:00:00.000Z")
+        self.assertNotEqual(parsed, "reset unknown")
+        self.assertIn(":", parsed)
+
+    def test_human_reset_unknown_not_a_weekday_guess(self):
+        buf = io.StringIO()
+        grok = dict(GROKBOT_STATUS)
+        grok.pop("nextResetTimestampUtc")
+        with self._http(grokbot=grok), patch("sys.stdout", buf):
+            usage.main(["--meter", "grokbot"])
+        self.assertIn("reset unknown", buf.getvalue())
+        self.assertNotIn("typically", buf.getvalue().lower())
+
     def test_help_lists_three_meters(self):
         buf = io.StringIO()
         with patch("sys.stdout", buf):

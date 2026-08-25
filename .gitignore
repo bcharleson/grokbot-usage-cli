@@ -13,6 +13,8 @@ latest.json
 .secrets/
 secrets/
 *.cookie
+cursor-cookie.txt
+*-cookie.txt
 auth.json
 .env
 .env.*

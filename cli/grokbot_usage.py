@@ -27,6 +27,8 @@ Usage:
   grokbot-usage --meter supergrok
   grokbot-usage --quiet --threshold 90
   grokbot-usage login
+  grokbot-usage login --from-ide
+  grokbot-usage login --cookie-file ./cursor-cookie.txt
   grokbot-usage logout
 
 Exit codes: 0 ok, 1 threshold breached or every meter failed, 2 usage error.
@@ -344,13 +346,14 @@ def fmt_pct(value) -> str:
 
 
 def fmt_reset(value) -> str:
+    """Local weekday+time from this account's API timestamp. Never a fallback day."""
     if not value:
-        return "?"
+        return "reset unknown"
     try:
-        dt = datetime.fromisoformat(value.replace("Z", "+00:00"))
+        dt = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
         return dt.astimezone().strftime("%a %H:%M")
-    except ValueError:
-        return value[:16]
+    except (ValueError, TypeError):
+        return "reset unknown"
 
 
 def render_human(data: dict) -> str:
@@ -445,9 +448,16 @@ def read_login_input() -> str:
     return sys.stdin.read()
 
 
-def cmd_login(from_ide: bool) -> int:
+def cmd_login(from_ide: bool, cookie_file: str | None = None) -> int:
     try:
-        if from_ide:
+        if from_ide and cookie_file:
+            print("login: use --from-ide or --cookie-file, not both", file=sys.stderr)
+            return 2
+        if cookie_file:
+            path = Path(cookie_file).expanduser()
+            raw = path.read_text(encoding="utf-8")
+            cookie = normalize_session_cookie(raw)
+        elif from_ide:
             cookie = cursor_cookie_from_jwt(cursor_session_token_from_ide())
         else:
             raw = read_login_input()
@@ -501,6 +511,9 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--from-ide", action="store_true",
         help="with login: store a cookie from Cursor IDE state.vscdb")
+    parser.add_argument(
+        "--cookie-file", metavar="PATH",
+        help="with login: read WorkosCursorSessionToken from PATH (never printed)")
     return parser
 
 
@@ -540,8 +553,10 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
     if args.from_ide and args.command != "login":
         parser.error("--from-ide is only valid with login")
+    if args.cookie_file and args.command != "login":
+        parser.error("--cookie-file is only valid with login")
     if args.command == "login":
-        return cmd_login(from_ide=args.from_ide)
+        return cmd_login(from_ide=args.from_ide, cookie_file=args.cookie_file)
     if args.command == "logout":
         return cmd_logout()
 

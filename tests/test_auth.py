@@ -191,6 +191,34 @@ class LoginLogoutTests(unittest.TestCase):
         with patch("sys.stdout", io.StringIO()):
             self.assertEqual(usage.cmd_logout(), 0)
 
+    def test_login_cookie_file(self):
+        cookie = make_cookie("file_user")
+        src = Path(self.home) / "cursor-cookie.txt"
+        src.write_text(cookie + "\n", encoding="utf-8")
+        with patch("sys.stdout", io.StringIO()) as out:
+            code = usage.cmd_login(from_ide=False, cookie_file=str(src))
+        self.assertEqual(code, 0)
+        stored = Path(self.home) / ".secrets" / "cursor-session-cookie"
+        self.assertEqual(stored.read_text(encoding="utf-8"), cookie)
+        self.assertEqual(stat.S_IMODE(stored.stat().st_mode), 0o600)
+        self.assertNotIn(cookie, out.getvalue())
+
+    def test_login_cookie_file_via_main(self):
+        cookie = make_cookie("main_file")
+        src = Path(self.home) / "cursor-cookie.txt"
+        src.write_text("WorkosCursorSessionToken=" + cookie, encoding="utf-8")
+        with patch("sys.stdout", io.StringIO()):
+            self.assertEqual(usage.main(["login", "--cookie-file", str(src)]), 0)
+        stored = (Path(self.home) / ".secrets" / "cursor-session-cookie").read_text()
+        self.assertEqual(stored, cookie)
+
+    def test_cookie_file_and_from_ide_conflict(self):
+        err = io.StringIO()
+        with patch("sys.stderr", err):
+            code = usage.cmd_login(from_ide=True, cookie_file="x")
+        self.assertEqual(code, 2)
+        self.assertIn("not both", err.getvalue())
+
     def test_main_login_logout(self):
         cookie = make_cookie("main_user")
         stdin = io.StringIO(cookie)
