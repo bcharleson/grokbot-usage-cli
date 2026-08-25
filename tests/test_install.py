@@ -1,9 +1,7 @@
 """install.sh: local checkout and piped (tarball) paths."""
 from __future__ import annotations
 
-import json
 import os
-import shutil
 import stat
 import subprocess
 import tarfile
@@ -75,30 +73,6 @@ class InstallShTests(unittest.TestCase):
             self.assertTrue(binary.is_file())
             self.assertTrue(skill.is_file())
             self.assertIn("Install succeeded.", result.stdout)
-            self.assertNotIn("npm", result.stdout.lower())
-
-
-class NpmShimTests(unittest.TestCase):
-    def test_package_name_and_files(self):
-        pkg = json.loads((REPO / "package.json").read_text(encoding="utf-8"))
-        self.assertEqual(pkg["name"], "grokbot-usage-cli")
-        self.assertEqual(pkg["bin"]["grokbot-usage"], "bin/grokbot-usage.js")
-        for name in ("cli/", "install.sh", "README.md", "LICENSE"):
-            self.assertIn(name, pkg["files"])
-        self.assertNotIn("postinstall", pkg.get("scripts") or {})
-
-    def test_node_shim_help(self):
-        node = shutil.which("node")
-        if not node:
-            self.skipTest("node not installed")
-        result = subprocess.run(
-            [node, str(REPO / "bin/grokbot-usage.js"), "--help"],
-            capture_output=True,
-            text=True,
-            check=False,
-        )
-        self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertIn("grokbot-usage", result.stdout)
 
 
 if __name__ == "__main__":

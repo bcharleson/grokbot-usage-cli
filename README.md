@@ -218,16 +218,6 @@ The timestamps below are **EXAMPLE** only. The next reader's `resetsAt` /
 
 A meter that cannot be read reports `{"error": "..."}` instead of fake numbers.
 
-## Publish (maintainer)
-
-Stay private until you review and scrub. Then **you** flip GitHub visibility
-and **you** run `npm publish`. Agents must not change visibility or publish.
-
-The package name is `grokbot-usage-cli` (matches the repo). A registry lookup
-for that name returned 404 at packaging time — re-check before you publish.
-The tarball is the Python CLI plus a tiny `bin/grokbot-usage` Node shim that
-execs `python3`. No postinstall network. No tokens in the package.
-
 ## License
 
 MIT — see [LICENSE](LICENSE).
